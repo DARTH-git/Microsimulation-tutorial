@@ -1,7 +1,7 @@
 # Microsimulation-tutorial
 This github repository provides the code explained in the paper: 
 
-- Krijkamp E, Alarid-Escudero F, Enns EA, Jalal H, Hunink MGM, Pechlivanoglou P. Microsimulation modeling for health decision sciences using R: A tutorial. Med Decis Making. 2018 (Forthcoming). 
+- Krijkamp E, Alarid-Escudero F, Enns EA, Jalal H, Hunink MGM, Pechlivanoglou P. Microsimulation modeling for health decision sciences using R: A tutorial. Med Decis Making. 2018;38(3):400–22. 
 
 ## Sections
 - Appendix A: simple microsimulation model - Sick-Sicker example
