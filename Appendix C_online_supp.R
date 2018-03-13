@@ -2,9 +2,11 @@
 ################# Cohort version of Microsimulation modeling using R: a tutorial #### 2018 #
 ############################################################################################
 # This code forms the basis for cohort model of the microsimulation model of the article: 
-# 'Microsimulation modeling for health decision sciences using R: a tutorial' 
-# Authors: Eline Krijkamp, Fernando Alarid-Escudero, 
-#          Eva Enns, Hawre Jalal, Myriam Hunink and  Petros Pechlivanoglou
+#
+# Krijkamp E, Alarid-Escudero F, Enns EA, Jalal H, Hunink MGM, Pechlivanoglou P. 
+# Microsimulation modeling for health decision sciences using R: A tutorial. 
+# Med Decis Making. 2018;38(3):400–22.
+#
 # Please cite to this article when using this code 
 #
 # See GitHub for more information or code updates
