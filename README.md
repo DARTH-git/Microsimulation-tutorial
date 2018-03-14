@@ -20,7 +20,7 @@ This GitHub repository provides the code explained in the paper:
 
   * Eva A. Enns 
   
-  * Hawre Jalal - 
+  * Hawre Jalal 
 
   * M.G. Myriam Hunink 
 
