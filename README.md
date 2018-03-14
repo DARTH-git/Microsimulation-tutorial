@@ -1,7 +1,7 @@
 # Microsimulation-tutorial
-This github repository provides the code explained in the paper: 
+This GitHub repository provides the code explained in the paper: 
 
-- Krijkamp E, Alarid-Escudero F, Enns EA, Jalal H, Hunink MGM, Pechlivanoglou P. Microsimulation modeling for health decision sciences using R: A tutorial. Med Decis Making. 2018;38(3):400–22. 
+- Krijkamp EM, Alarid-Escudero F, Enns EA, Jalal HJ, Hunink MGM, Pechlivanoglou P. Microsimulation modeling for health decision sciences using R: A tutorial. Med Decis Making. 2018;38(3):400–22. 
 
 ## Sections
 - [Appendix A: simple microsimulation model - Sick-Sicker example](https://github.com/DARTH-git/Microsimulation-tutorial/blob/master/Appendix%20A_online_supp.R)
@@ -14,13 +14,13 @@ This github repository provides the code explained in the paper:
 
 ## Full list of Contributors:
 
-  * [Eline Krijkamp](https://github.com/krijkamp)
+  * [Eline Krijkamp](https://github.com/krijkamp) 
 
-  * [Fernando Alarid-Escudero](https://github.com/feralaes)
+  * [Fernando Alarid-Escudero](https://github.com/feralaes) 
 
-  * Eva A. Enns
-
-  * Hawre Jalal
+  * Eva A. Enns 
+  
+  * Hawre Jalal - 
 
   * M.G. Myriam Hunink 
 
