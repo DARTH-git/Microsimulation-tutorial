@@ -1,4 +1,4 @@
-# Microsimulation-tutorial
+# Microsimulation in R : A tutorial
 This GitHub repository provides the code explained in the paper: 
 
 - Krijkamp EM, Alarid-Escudero F, Enns EA, Jalal HJ, Hunink MGM, Pechlivanoglou P. Microsimulation modeling for health decision sciences using R: A tutorial. Med Decis Making. 2018;38(3):400–22. 
