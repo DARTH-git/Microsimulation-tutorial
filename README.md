@@ -18,10 +18,10 @@ This GitHub repository provides the code explained in the paper:
 
   * [Fernando Alarid-Escudero](https://github.com/feralaes) 
 
-  * Eva A. Enns 
+  * Eva Enns 
   
   * Hawre Jalal 
 
-  * M.G. Myriam Hunink 
+  * Myriam Hunink 
 
   * Petros Pechlivanoglou
