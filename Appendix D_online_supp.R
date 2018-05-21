@@ -216,6 +216,8 @@ sim_no_trt  <- MicroSim(v.M_1, n.i, n.t, v.n, d.c, d.e, Trt = FALSE) # run for n
 sim_trt     <- MicroSim(v.M_1, n.i, n.t, v.n, d.c, d.e, Trt = TRUE)  # run for treatment
 comp.time = Sys.time() - p
 
+comp.time
+
 ################################# Cost-effectiveness analysis #############################
 # store the mean costs (and the MCSE) of each strategy in a new variable C (vector costs)
 v.C  <- c(sim_no_trt$tc_hat, sim_trt$tc_hat) 
