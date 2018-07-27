@@ -18,9 +18,9 @@ This GitHub repository provides the code explained in the paper:
 
   * [Fernando Alarid-Escudero](https://github.com/feralaes) 
 
-  * Eva Enns 
+  * [Eva Enns](https://github.com/evaenns)
   
-  * Hawre Jalal 
+  * [Hawre Jalal](https://github.com/hjalal)
 
   * Myriam Hunink 
 
