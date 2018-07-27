@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1527563583307.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "192531185",
+    "id" : "694B5150",
+    "lastKnownWriteTime" : 1527563719,
+    "last_content_update" : 1527563719880,
+    "path" : "~/Google Drive/Projects/DARTH/Courses/2018 Merck/Participants's material/Day 1/Markov Model/Markov_3state.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "163,1",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

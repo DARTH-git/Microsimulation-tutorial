@@ -85,7 +85,8 @@ samplev <- function (probs, m) {
 }
 # The MicroSim function for the simple microsimulation of the 'Sick-Sicker' model keeps track of what happens to each individual during each cycle. 
 
-MicroSim <- function(v.M_1, n.i, n.t, v.n, d.c, d.e, TR.out = TRUE, TS.out = TRUE, Trt = FALSE, seed = 1) {
+MicroSim <- function(v.M_1, n.i, n.t, v.n, d.c, d.e, TR.out = TRUE, TS.out = TRUE, 
+                     Trt = FALSE, seed = 1) {
 # Arguments:  
   # v.M_1:   vector of initial states for individuals
   # n.i:     number of individuals

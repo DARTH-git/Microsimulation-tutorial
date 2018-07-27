@@ -1,0 +1,81 @@
+## Clean everything from workspace
+rm(list=ls())
+
+## Install necessary packages
+# install.packages("scales")
+# install.packages("reshape2")
+# install.packages("ggplot2")
+# install.packages("ellipse")
+# install.packages("plyr")
+# install.packages("matrixStats")
+
+## Set working space
+# Define work directory
+
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+source("../Functions/PSA_functions.R")
+source("../Functions/DARTH_functions.R")
+
+## Load PSA file
+# Read the `.csv` simulation file into `R`.
+psa <- read.csv("PSA.csv",header=TRUE)
+
+## Create initial parameters
+# Label our strategies
+Strategies <- c("Chemo", "Radio", "Surgery")
+Strategies
+
+#Determine the number of strategies
+numDepVars <- length(Strategies)
+numDepVars
+
+## Create matrices for outcomes and parameters
+Outcomes <- psa[, 2:(numDepVars*2+1)]
+head(Outcomes)
+
+#######################################
+#### Displaying results from a PSA ####
+#######################################
+### Define matrices with costs and effects
+m.c <- Outcomes[, c(1, 3, 5)]
+m.e <- Outcomes[, c(2, 4, 6)]
+
+### Define a vector of WTP values
+v.wtp <- c(1, seq(5000, 150000, length.out = 31))
+
+### CE Plane and Scatter Plot ####
+library(plyr) # To summarize data and generate new data frames from it
+library(ggplot2)
+ce.mat <- cbind(Strategies = 1:3, 
+                Costs = colMeans(m.c), 
+                Effectviness = colMeans(m.e))
+ce.front <- getFrontier(ce.mat, plot = F)
+ce.df <- data.frame(Strategy = Strategies,
+                    Cost = colMeans(m.c),
+                    Effectiveness = colMeans(m.e))
+plotFrontier(CEmat = ce.df, frontier = ce.front)
+
+
+### With user-written function & ggplot2
+ScatterCE(strategies = Strategies,
+          m.c = m.c,
+          m.e = m.e)
+
+#### CEA Curves (CEAC) & Frontier (CEAF) ####
+ceaf(v.wtp = v.wtp, 
+     strategies = Strategies, 
+     m.e = m.e, 
+     m.c = m.c)
+
+
+#### Expected Loss Curves (ELC) ####
+elc(v.wtp = v.wtp, 
+    strategies = Strategies, 
+    m.e = m.e, 
+    m.c = m.c)
+
+#### Expected Loss Curves (ELC) ####
+evpi(v.wtp = v.wtp, 
+     m.e = m.e, 
+     m.c = m.c)
+

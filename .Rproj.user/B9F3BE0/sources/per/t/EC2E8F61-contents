@@ -1,0 +1,139 @@
+
+#################  simple 3 -state Markov model with time dependency  #########################################
+
+# Developed by the Decision Analysis in R for Technologies in Health (DARTH) group
+# Fernando Alarid-Escudero, PhD (1) 
+# Eva A. Enns, MS, PhD (1)	
+# M.G. Myriam Hunink, MD, PhD (2,3)
+# Hawre J. Jalal, MD, PhD (4) 
+# Eline M. Krijkamp, MSc (2)	
+# Petros Pechlivanoglou, PhD (5) 
+
+# In collaboration of: 		
+# 1 University of Minnesota School of Public Health, Minneapolis, MN, USA
+# 2 Erasmus MC, Rotterdam, The Netherlands
+# 3 Harvard T.H. Chan School of Public Health, Boston, USA
+# 4 University of Pittsburgh Graduate School of Public Health, Pittsburgh, PA, USA
+# 5 The Hospital for Sick Children, Toronto and University of Toronto, Toronto ON, Canada
+
+#####################################################################################
+# Please cite our publications when using this code
+# Jalal H, et al. An Overview of R in Health Decision Sciences. Med. Decis. Making. 2017; 37(3): 735-746. 
+# Krijkamp EM, et al. Microsimulation modeling for health decision sciences using R: a tutorial. Med. Decis. Making. 2018; (in press). 
+
+####################################################################################
+# Copyright 2017, THE HOSPITAL FOR SICK CHILDREN AND THE COLLABORATING INSTITUTIONS. 
+# All rights reserved in Canada, the United States and worldwide.  
+# Copyright, trademarks, trade names and any and all associated intellectual property are exclusively owned by THE HOSPITAL FOR SICK CHILDREN and the 
+# collaborating institutions and may not be used, reproduced, modified, distributed or adapted in any way without written permission.
+
+rm(list = ls())  # delete everything that is in R's memory
+
+setwd("your working directory") # set the working directory 
+############################# Model Input ###########################################
+v.n  <- c("Healthy", "Sick", "Dead")        # state names
+n.s  <- length(v.n)                         # number of states
+n.t  <- 60                                # number of cycles
+p.HS <- 0.05                                # probability to become healthy when sick
+p.HD <- seq(0.01, 0.003, length.out = n.t)  # probability to die when sick (age-dependent)
+p.SD <- 0.1                                 # probability to die when sick
+
+               
+# Costs and utilities  
+c.H  <- 400                     # cost of remaining one cycle healthy
+c.S  <- 100                     # cost of remaining one cycle sick
+c.D  <- 0                       # cost of remaining one cycle dead
+u.H  <- 0.8                     # utility when healthy 
+u.S  <- 0.5                     # utility when sick
+u.D  <- 0                       # utility when dead
+d.r  <- 0.03                    # discount rate per cycle
+v.dw <- 1 / (1 + d.r) ^ (0:n.t) # calculate discount weights for each cycle based on discount rate d.r
+
+m.TR      <- matrix(NA, nrow = n.t+1, ncol = n.s, 
+                    dimnames = list(0:n.t, v.n))        # create Markov trace
+m.TR[1, ] <- c(1, 0, 0)                                 # initialize Markov trace
+
+a.P <- array(0,                                         # Create 3-D array
+             dim = c(n.s, n.s, n.t),
+             dimnames = list(v.n, v.n, 0:(n.t-1)))
+### From Healthy
+a.P["Healthy", "Healthy", ] <- 1 - p.HD - p.HS
+a.P["Healthy", "Sick", ]    <- p.HS
+a.P["Healthy", "Dead", ]    <- p.HD
+
+### From Sick
+a.P["Sick", "Sick", ] <- 1 - p.SD
+a.P["Sick", "Dead", ] <- p.SD
+
+### From Dead
+a.P["Dead", "Dead", ] <- 1
+
+
+for (t in 1:n.t){ # throughout the number of cycles
+  m.TR[t + 1, ] <- m.TR[t, ] %*% a.P[, , t]      # estimate the Markov trace for cycle t + 1 using the t th matrx from the probability array 
+}
+
+head(m.TR)
+
+# plot the markov trace
+
+matplot(m.TR, type = 'l', 
+        ylab = "Probability of state occupancy",
+        xlab = "Cycle",
+        main = "Markov Trace", 
+        col = c("black", "green", "red"))                 # create a plot of the markov trace
+legend("right", v.n, col = c("black", "green", "red"), lty = 1:3, bty = "n")  # add a legend to the graph
+
+
+v.os <- 1 - m.TR[, 3]                          # calculate the overall survival (OS) probability
+
+plot(v.os, type = 'l', 
+     ylim = c(0, 1),
+     ylab = "Survival probability",
+     xlab = "Cycle",
+     main = "Overall Survival")                # create a simple plot showing the OS
+grid(nx = n.t, ny = 10, col = "lightgray", lty = "dotted", lwd = par("lwd"), equilogs = TRUE) # add grid 
+
+LE <- sum(v.os)                                # summing probablity of OS across time  (i.e. life expectancy)
+v.os <- rowSums(m.TR[, 1:2])                   # alternative way of calculating the OS probability   
+
+############ OUTPUT  ###########################################
+
+# mean cost and QALYs per cycle
+v.c <- m.TR %*% c(c.H, c.S, c.D)  # calculate expected costs by multiplying m.TR with the cost vector for the different health states   
+v.e <- m.TR %*% c(u.H, u.S, u.D)  # calculate expected QALYs by multiplying m.TR with the utilities for the different health states   
+
+# discounted QALYs and costs
+
+TC <- t(v.c) %*% v.dw   # discount costs  by multiplying the cost vector with discount weights (v.dw) 
+TE <- t(v.e) %*% v.dw   # discount QALYS  by multiplying the QALYs vector with discount weights (v.dw)
+
+results <- data.frame("Total Cost" = TC, "Life Expectancy" = LE, "Total QALYs" = TE)
+results
+
+
+
+
+###################################### altenative #########################################
+
+##################  Recreate the transition probability matrix every cycle ###################################
+
+p1 <- Sys.time()                                    # start the clock
+
+m.TR1 <- matrix(NA, nrow = n.t + 1, ncol = n.s, 
+                dimnames = list(0:n.t, v.n))        # create Markov trace
+
+m.TR1[1, ] <- c(1, 0, 0)                            # initialize Markov trace
+
+for (t in 1:n.t) {                                       # throughout the number of cycles
+  m.P <- matrix(c(1 - p.HD[t] - p.HS,     p.HS, p.HD[t], # Transition matrix (notice that p.HD varies with time) 
+                  0, 1 - p.SD,   p.SD ,
+                  0,        0,      1),
+                nrow = n.s, ncol = n.s, byrow = TRUE,
+                dimnames = list(v.n, v.n))
+  
+  m.TR1[t + 1, ] <- m.TR1[t, ] %*% m.P                  # estimate the Markov trace for the next cycle (t + 1) 
+}
+
+p1 <- Sys.time() - p1                                   # what was the execution time required?
+

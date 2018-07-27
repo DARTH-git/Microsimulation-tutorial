@@ -1,0 +1,354 @@
+################# Simple 3-state Markov model in R ####################
+############### Probabilistic sensitivity analysis ####################
+
+# Developed by the Decision Analysis in R for Technologies in Health (DARTH) group
+# Fernando Alarid-Escudero, PhD (1) 
+# Eva A. Enns, MS, PhD (1)	
+# M.G. Myriam Hunink, MD, PhD (2,3)
+# Hawre J. Jalal, MD, PhD (4) 
+# Eline M. Krijkamp, MSc (2)	
+# Petros Pechlivanoglou, PhD (5) 
+
+# In collaboration of: 		
+# 1 University of Minnesota School of Public Health, Minneapolis, MN, USA
+# 2 Erasmus MC, Rotterdam, The Netherlands
+# 3 Harvard T.H. Chan School of Public Health, Boston, USA
+# 4 University of Pittsburgh Graduate School of Public Health, Pittsburgh, PA, USA
+# 5 The Hospital for Sick Children, Toronto and University of Toronto, Toronto ON, Canada
+
+##################################################################################
+# Please cite our publications when using this code
+# Jalal H, et al. An Overview of R in Health Decision Sciences. Med. Dec. Mak. 2017; 37(3): 735-746. 
+# Krijkamp EM, et al. Microsimulation modeling for health decision sciences using R: a tutorial. Med. Dec. Mak. 2018; (in press). 
+
+# Copyright 2017, THE HOSPITAL FOR SICK CHILDREN AND THE COLLABORATING INSTITUTIONS. 
+# All rights reserved in Canada, the United States and worldwide.  
+# Copyright, trademarks, trade names and any and all associated intellectual property are exclusively owned by THE HOSPITAL FOR SICK CHILDREN and the 
+# collaborating institutions and may not be used, reproduced, modified, distributed or adapted in any way without written permission.
+
+rm(list = ls())  # Delete everything that is in R's memory
+
+#install.packages(c("reshape2"), dependencies = TRUE)
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+source("../Functions/PSA_functions.R") # load custom made functions for PSA
+
+######################### INPUT PARAMETERS ####################################
+v.n   <- c("Healthy", "Sick", "Dead")     # state names
+n.s   <- length(v.n)                      # number of states
+n.t   <- 60                               # number of cycles
+n.sim <- 10000                            # number of simulations
+d.r   <- 0.03                             # discount rate 
+v.dw  <- 1 / (1 + d.r) ^ (0:n.t)          # calculate discount weight for each cycle based on discount rate d.r
+
+####### probabilistic analysis ########################################### 
+####### Create function that generate random samples ###################################
+
+## Function that generates random sample for PSA
+gen_psa <- function(n.sim = 1000, seed = 1){
+  set.seed(seed)              # set a seed to be able to reproduce the same results
+  
+  df.psa <- data.frame(
+    p.HD = rbeta(n.sim, 20,  980),                # probability from healthy to dead
+    p.HS = rbeta(n.sim, 50,  950),                # probability from healthy to sick
+    p.SD = rbeta(n.sim, 100, 900),                # probability from sick to dead
+    c.H  = rnorm(n.sim, 400, 50) ,                # cost of being in healthy state
+    c.S  = rnorm(n.sim, 100, 80) ,                # cost of being in sick state
+    c.D  = 0,
+    
+    u.H  = rnorm(n.sim, 0.8, 0.02),               # utility of being in healthy state
+    u.S  = rnorm(n.sim, 0.5, 0.02),               # utility of being in the sick state
+    u.D  = 0                                     # utility of being dead 
+  )
+  return(df.psa)
+}
+# Try it
+gen_psa(10) # Works!
+
+# wrap the code 3-state Markov model in a function
+MM.3state <- function(params) {
+  with(as.list(params),
+       {
+         v.dw <- 1 / (1 + d.r) ^ (0:n.t) # calculate discount weight for each cycle based on discount rate d.r
+         
+         # create a transition matrix
+         m.P  <- matrix(c(1 - p.HD - p.HS, p.HS, p.HD,   
+                          0,            1- p.SD, p.SD,
+                          0,                  0,    1),
+                        nrow = n.s, ncol = n.s, byrow = TRUE,
+                        dimnames = list(v.n, v.n)) # name the columns and rows of the transition matrix
+         
+         m.TR <- matrix(NA, nrow = n.t + 1 , ncol = n.s, 
+                        dimnames = list(0:n.t, v.n))     # create Markov trace (n.t + 1 because R doesn't understand  Cycle 0)
+         
+         m.TR[1, ] <- c(1, 0, 0)                         # initialize Markov trace
+         
+         ####### PROCESS ###########################################
+         
+         for (t in 1:n.t){                              # throughout the number of cycles
+           m.TR[t + 1, ] <- m.TR[t, ] %*% m.P           # estimate the Markov trace for cycle the next cycle (t + 1)
+         }
+         
+         ####### OUTPUT  ###########################################
+         
+         # mean cost and QALYs per cycle
+         v.c <- m.TR %*% c(c.H, c.S, c.D)  # calculate expected costs by multiplying m.TR with the cost vector for the different health states   
+         v.u <- m.TR %*% c(u.H, u.S, u.D)  # calculate expected QALYs by multiplying m.TR with the utilities for the different health states   
+         
+         # discounted QALYs and costs
+         
+         TC <- t(v.c) %*% v.dw    # Discount costs by multiplying the cost vector with discount weights (v.dw) 
+         TE <- t(v.u) %*% v.dw    # Discount QALYS by multiplying the QALYs vector with discount weights (v.dw)
+         
+         results <- c(TC, TE)
+         return(results)
+       }
+  )
+}
+
+## Draw random sample for PSA
+df.psa <- gen_psa(n.sim = n.sim)
+## Initialize matrix of outcomes
+df.out <- matrix(NaN, nrow = n.sim, ncol = 2)
+colnames(df.out) <- c("TE", "TC")
+
+## Run PSA
+p <- Sys.time()   # save system time 
+for(i in 1:n.sim){
+  df.out[i,] <- MM.3state(df.psa[i, ])
+  cat('\r', paste(round(i/n.sim * 100), "% done", sep = " "))       # display the progress of the simulation
+}
+t.psa <- Sys.time() - p  # calculate time to run the analusis by extracting p from the current system time 
+
+t.psa
+
+ScatterCE(strategies = "treatment", m.e = data.frame(df.out[, "TE"]), m.c = data.frame(df.out[, "TC"])) # cost-effectiveness plane
+
+
+################################# ALTERNATIVE METHODS ################################
+
+####### probabilistic analysis method 0.0 ########################################### 
+####### Generate random values inside a "for" loop ###################################
+p1 <- Sys.time()   # save system time 
+set.seed(1)        # set a seed to be able to reproduce the same results
+TC1 <- TE1 <- vector("numeric", length = n.sim) # create a vector with length equal to the number of simulations
+
+for (i in 1: n.sim) {
+  p.HD <- rbeta(n = 1, shape1 = 20,  shape2 = 980)  # probability to die when healthy
+  p.HS <- rbeta(n = 1, shape1 = 50,  shape2 = 950)  # probability to become healthy when sick
+  p.SD <- rbeta(n = 1, shape1 = 100, shape2 = 900)  # probability to die when sick
+  c.H  <- rnorm(n = 1, mean   = 400, sd = 50)       # cost of remaining healthy for one cycle 
+  c.S  <- rnorm(n = 1, mean   = 100, sd = 80)       # cost of remaining sick for one cycle
+  c.D  <- 0                                         # cost of remaining dead for one cycle
+  
+  u.H  <- rnorm(1, 0.8, 0.02)                       # utility when healthy 
+  u.S  <- rnorm(1, 0.5, 0.02)                       # utility when sick
+  u.D  <- 0                                         # utility when dead
+
+  m.P <- matrix(c(1 - p.HD - p.HS, p.HS, p.HD, # Transition matrix
+                  0,           1 - p.SD, p.SD,
+                  0,                  0,   1), 
+                  byrow = TRUE, nrow = n.s,  ncol = n.s, 
+                  dimnames = list(v.n, v.n))
+  
+  m.TR <- matrix(NA, nrow = n.t + 1, ncol = n.s, 
+                    dimnames = list(0:n.t, v.n))   # create Markov trace
+  
+  m.TR[1, ] <- c(1, 0, 0)                          # initialize Markov trace
+
+  ####### PROCESS #########################################
+  for (t in 1:n.t) {                            # throughout the number of cycles
+    m.TR[t + 1, ] <- m.TR[t, ] %*% m.P          # estimate the Markov trace for cycle t + 1 
+  } # close the loop for time 
+
+  ####### OUTPUT  ###########################################
+  v.c <- c(c.H, c.S, c.D)     # vector of costs  
+  v.e <- c(u.H, u.S, u.D)     # vector of utilities
+  
+  TC1[i] <- t(m.TR %*% v.c) %*% v.dw  # total cost for ith simulation
+  TE1[i] <- t(m.TR %*% v.e) %*% v.dw  # total QALYs for ith simulation
+  
+} # close the loop for the number of simulations 
+
+mean(TC1)   # calculate the mean costs
+mean(TE1)   # calculate the mean QALYs
+
+t1 <- Sys.time() - p1  # calculate time to run the analusis by extracting p from the current system time 
+
+################ probabilistic analysis method 0.1 ########################################### 
+####### Generate random values inside a Markov function - use sapply  #################################
+ 
+ p2 <- Sys.time()          # save system time 
+ set.seed(1)               # set a seed to be able to reproduce the same results 
+  
+ Markov <- function(i) {   # Markov model function - for different values of index i calculate the Markov model
+   p.HD <- rbeta(1, 20, 980)                 # probability from healthy to dead
+   p.HS <- rbeta(1, 50, 950)                 # probability from healthy to sick
+   p.SD <- rbeta(1, 100,900)                 # probability from sick to dead
+   c.H  <- rnorm(1, 400, 50)                 # cost of being in healthy state
+   c.S  <- rnorm(1, 100, 80)                 # cost of being in sick state
+   c.D  <- 0                                 # cost of being dead 
+   
+   u.H  <- rnorm(1, 0.8, 0.02)               # utility of being in healthy state
+   u.S  <- rnorm(1, 0.5, 0.02)               # utility of being in the sick state
+   u.D  <- 0                                 # utility of being dead 
+   
+   m.P <- matrix(c(1 - p.HD - p.HS, p.HS, p.HD, # transition matrix
+                   0,           1 - p.SD, p.SD,
+                   0,               0,       1),
+                   byrow = TRUE, nrow = n.s,
+                   dimnames = list(v.n, v.n))
+   
+   m.TR <- matrix(NA, nrow = n.t + 1, ncol = n.s, 
+                  dimnames = list(0:n.t, v.n))   # create Markov trace
+   
+   m.TR[1, ] <- c(1, 0, 0)                       # initialize Markov trace
+   
+   for (t in 1:n.t) {                            # throughout the number of cycles
+     m.TR[t + 1, ] <- m.TR[t, ] %*% m.P          # estimate the Markov trace for cycle t + 1
+   } # close the for loop for time 
+   
+   v.c <- c(c.H, c.S, c.D)         # vector of costs
+   v.e <- c(u.H, u.S, u.D)         # vector of utilities
+   
+   TC <- t(m.TR %*% v.c) %*% v.dw  # total cost for ith simulation
+   TE <- t(m.TR %*% v.e) %*% v.dw  # total QALYs for ith simulation
+   c(TC, TE)                       # output of the function TC and TE
+   } # close the Markov function 
+ 
+ Results <- sapply(1:n.sim, Markov)   # Run the Markov function for n.sim times and save the results in the variable Results 
+ 
+ TC2     <- Results[1, ] # save costs separately
+ TE2     <- Results[2, ] # save QALYs separately
+ 
+t2 <- Sys.time() - p2  # calculate time to run the analysis by extracting p from the current system time 
+ 
+############################################################################################## 
+################ probabilistic analysis method 1.0 ########################################### 
+##############################################################################################
+################ generate values outside of the for loop #####################################  
+
+p3 <- Sys.time()         # save system time 
+set.seed(1)              # set a seed to be able to reproduce the same results
+
+p.HD <- rbeta(n.sim, 20,  980)                # probability from healthy to dead
+p.HS <- rbeta(n.sim, 50,  950)                # probability from healthy to sick
+p.SD <- rbeta(n.sim, 100, 900)                # probability from sick to dead
+c.H  <- rnorm(n.sim, 400, 50)                 # cost of being in healthy state
+c.S  <- rnorm(n.sim, 100, 80)                 # cost of being in sick state
+c.D  <- 0
+
+u.H  <- rnorm(n.sim, 0.8, 0.02)               # utility of being in healthy state
+u.S  <- rnorm(n.sim, 0.5, 0.02)               # utility of being in the sick state
+u.D  <- 0                                     # utility of being dead 
+TC3 <- TE3 <- vector("numeric", n.sim)        # initiate te vector to store costs and effects
+m.TR <- array(0, dim = c(n.t + 1, n.s, n.sim)) # initiate the Markov trace 
+
+for (i in 1: n.sim){  # start the loop for every simulation
+m.P <- matrix(c(1 - p.HD[i] - p.HS[i], p.HS[i], p.HD[i], # transition matrix
+                0,                 1 - p.SD[i], p.SD[i],
+                0,                           0,       1), 
+              byrow = TRUE, nrow = n.s, ncol = n.s,
+              dimnames = list(v.n, v.n))
+
+m.TR[1, , i] <- c(1, 0, 0)                    # initialize Markov trace
+
+for (t in 1:n.t) {                            # throughout the number of cycles
+  m.TR[t + 1, , i] <- m.TR[t , , i] %*% m.P   # estimate the Markov trace for cycle t + 1 
+} # close the for loop for time 
+
+v.c <- c(c.H[i], c.S[i], c.D)    # vector of costs 
+v.e <- c(u.H[i], u.S[i], u.D)    # vector of utilities
+
+
+TC3[i] <- t(m.TR[, , i] %*% v.c) %*% v.dw  # calculate total discounted cost for ith simulation
+TE3[i] <- t(m.TR[, , i] %*% v.e) %*% v.dw  # calculate total discounted QALYs for ith simulation
+
+} # close function 
+
+t3 <- Sys.time() - p3  # calculate time to run the analusis by extracting p from the current system time 
+
+
+################ probabilistic analysis method 1.1 ########################################### 
+################ generate values outside of the Markov function - use sapply #################  
+
+p4 <- Sys.time()         # save system time 
+set.seed(1)              # set a seed to be able to reproduce the same results
+
+p.HD <- rbeta(n.sim, 20,  980)        # probability from healthy to dead
+p.HS <- rbeta(n.sim, 50,  950)        # probability from healthy to sick
+p.SD <- rbeta(n.sim, 100, 900)        # probability from sick to dead
+c.H  <- rnorm(n.sim, 400, 50)         # cost of being in healthy state
+c.S  <- rnorm(n.sim, 100, 80)         # cost of being in sick state
+c.D  <- 0
+
+u.H  <- rnorm(n.sim, 0.8, 0.02)       # utility of being in healthy state
+u.S  <- rnorm(n.sim, 0.5, 0.02)       # utility of being in the sick state
+u.D  <- 0
+
+
+Markov2 <- function(i) {     # Markov model function - for different values of index i calculate the Markov model
+  
+  m.P <- matrix(c(1 - p.HD[i] - p.HS[i],     p.HS[i], p.HD[i], # Transition matrix
+                                      0, 1 - p.SD[i], p.SD[i],
+                                      0,           0,      1),
+                byrow = T, nrow = n.s,
+                dimnames = list(v.n, v.n))
+  
+  m.TR <- matrix(NA, nrow = n.t + 1, ncol = n.s, 
+                 dimnames = list(0:n.t, v.n))   # create Markov trace
+  
+  m.TR[1, ] <- c(1, 0, 0)                       # initialize Markov trace
+  
+  for (t in 1:n.t) {                            # throughout the number of cycles
+    m.TR[t + 1, ] <- m.TR[t, ] %*% m.P          # estimate the Markov trace for cycle t + 1 
+  } # close the for loop for time 
+  
+  v.c <- c(c.H[i], c.S[i], c.D)   # vector of costs
+  v.e <- c(u.H[i], u.S[i], u.D)   # vector of utilities
+  
+  TC4 <- t(m.TR %*% v.c) %*% v.dw  # total discounted cost for ith simulation
+  TE4 <- t(m.TR %*% v.e) %*% v.dw  # total discounted QALYs for ith simulation
+  c(TC4, TE4)                      # output of the function TC and TE
+} # close the function 
+
+Results4 <- sapply(1:n.sim, Markov2) # apply the Markov2 functions for n.Sim times and save the results in the variable Results4
+TC4      <- Results4[1, ] # save costs seperately
+TE4      <- Results4[2, ] # save QALYs seperately
+
+t4 <- Sys.time() - p4  # calculate time to run the analusis by extracting p from the current system time 
+
+
+################ probabilistic analysis method 1.1 ########################################### 
+#######    probabilistic analysis using difference equation method    ################################## 
+p5 <- Sys.time()          # save system time 
+set.seed(1)               # set a seed to be able to reproduce the same results
+
+m.H <- m.S <- m.D <- matrix(0, nrow =  n.sim, ncol = n.t + 1,
+                      dimnames = list(1:n.sim, 0:n.t))  #initialize state matrices
+
+m.H[, 1] <- 1  # assign every proportion across the simulations to the Healthy state
+
+for (t in 1:n.t) {
+  m.H[, t + 1] <-  m.H[, t] * (1 - p.HD - p.HS)                     # calculate the prop of cohort in healthy state at time t + 1
+  m.S[, t + 1] <-  m.S[, t] * (1 - p.SD)       + m.H[, t] * p.HS    # calculate the prop of cohort in sick state at time t + 1
+  m.D[, t + 1] <-  m.D[, t] + m.H[, t] * p.HD  + m.S[, t] * p.SD    # calculate the prop of cohort in dead state at time t + 1
+} # close the loop for time 
+
+TE5 <- (u.H * m.H + u.S * m.S + u.D * m.D) %*% v.dw    # total discounted cost for all simulations
+TC5 <- (c.H * m.H + c.S * m.S + c.D * m.D) %*% v.dw    # total discounted QALYs for all simulations
+
+mean(TC5)   # calculate the mean discounted costs
+mean(TE5)   # calculate the mean discounted QALYs
+
+t5 <- Sys.time() - p5  # calculate time to run the analysis by extracting p from the current system time 
+
+
+TC <- cbind(TC1, TC2, TC3, TC4, TC5)  # create a variable with the total costs for the different methods
+TE <- cbind(TE1, TE2, TE3, TE4, TE5)  # create a variable with the total utilities for the different methods
+tt <- c(t1, t2, t3, t4, t5)           # count the time it took via each method
+colMeans(TE)                          # calculate the column mean of the TE variable 
+tt                                    # print the time it took for each model to run
+
+TE1 <- data.frame(TE1)           
+TC1 <- data.frame(TC1)
+ScatterCE(strategies = "treatment", m.e = TE1, m.c = TC1) # cost-effectiveness plane
