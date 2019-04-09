@@ -84,7 +84,7 @@ m.P <- matrix(c(1 - (p.HS1 + p.HD), p.HS1, 0,  p.HD,
 
 # Diagram of Sick Sicker model and its initial transition probabilities
 # This also can we do it with a function
-  plotmat(round(t(m.P), 3), pos = c(3,1), # Defining matrix "m.P_trt" and strategies' allocation
+  plotmat(round(t(m.P), 3), pos = c(3,1), # Defining matrix "m.P" and strategies' allocation
           lwd = 1, box.lwd = 2,
           cex.txt = 0.8,
           box.size = 0.1,
