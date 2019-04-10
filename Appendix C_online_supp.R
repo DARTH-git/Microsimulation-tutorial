@@ -22,6 +22,10 @@
 ############################################################################################
 # rm(list = ls())  # remove any variables in R's memory
 
+library(shape)
+library(diagram)
+
+
 ##################################### Model input #########################################
 # Model input
 n.t   <- 30                    # time horizon, 30 cycles
@@ -78,6 +82,25 @@ m.P <- matrix(c(1 - (p.HS1 + p.HD), p.HS1, 0,  p.HD,
                 nrow = n.s, ncol = n.s, byrow = T,
                  dimnames = list (v.n, v.n))
 
+# Diagram of Sick Sicker model and its initial transition probabilities
+# This also can we do it with a function
+  plotmat(round(t(m.P), 3), pos = c(3,1), # Defining matrix "m.P" and strategies' allocation
+          lwd = 1, box.lwd = 2,
+          cex.txt = 0.8,
+          box.size = 0.1,
+          box.type = "circle", # shape, e.g. square, circle, rectangle
+          box.prop = 0.5,
+          box.col = c("green", "yellow","light blue", "Red"), # shape color
+          arr.length=.1,
+          arr.width=.1,
+          self.cex = .4,
+          self.shifty = .06,
+          self.shiftx = -.1,
+
+          main = "Schematic representation of the Sick-Sicker Model", add = FALSE) # title
+
+	
+	
 # create the transition trace matrix (m.TR) capturing the proportion of the cohort in each state at each time point
 m.TR <-  matrix(0, nrow = n.t + 1, ncol = n.s, 
                    dimnames = list( paste("cycle", 0:n.t, sep = ""), v.n))
